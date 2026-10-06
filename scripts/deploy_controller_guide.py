@@ -451,9 +451,22 @@ def logs_data(paths: RuntimePaths, lines: int) -> dict[str, object]:
 
 
 def resolve_python() -> Path:
-    executable = Path(sys.executable).resolve()
+    executable = Path(sys.executable)
     if not executable.is_file():
         raise ClientError("E_RUNTIME_MISSING", "Python executable is unavailable")
+
+    # Homebrew removes Cellar patch-version paths during upgrades. Keep the
+    # launchd command on its stable major/minor symlink when it is the same
+    # interpreter, but retain a virtualenv's own executable and environment.
+    if sys.prefix == sys.base_prefix:
+        versioned = shutil.which(f"python{sys.version_info.major}.{sys.version_info.minor}")
+        if versioned:
+            candidate = Path(versioned)
+            try:
+                if candidate.samefile(executable):
+                    return candidate
+            except OSError:
+                pass
     return executable
 
 

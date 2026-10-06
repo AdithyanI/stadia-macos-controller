@@ -11,6 +11,7 @@ import tempfile
 import threading
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
@@ -221,6 +222,20 @@ def check_deploy_internals() -> None:
             raise AssertionError("Moved source passed production verification")
 
     paths = module.default_paths(REPO_ROOT)
+    with tempfile.TemporaryDirectory(prefix="controller-guide-python-test.") as directory:
+        stable_python = Path(directory) / "python-versioned"
+        stable_python.symlink_to(Path(sys.executable).resolve())
+        with patch.object(module.shutil, "which", return_value=str(stable_python)):
+            if sys.prefix == sys.base_prefix:
+                assert module.resolve_python() == stable_python
+            else:
+                assert module.resolve_python() == Path(sys.executable)
+
+        wrong_python = Path(directory) / "wrong-python"
+        wrong_python.write_text("not the interpreter", encoding="utf-8")
+        with patch.object(module.shutil, "which", return_value=str(wrong_python)):
+            assert module.resolve_python() == Path(sys.executable)
+
     plist = module.plist_payload(paths, Path(sys.executable).resolve())
     assert "EnvironmentVariables" not in plist
     assert plist["ProgramArguments"][:2] == ["/usr/bin/env", "-i"]
