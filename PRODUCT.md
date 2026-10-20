@@ -2,7 +2,7 @@
 
 ## Product
 
-A private, local web guide for the Stadia macOS Controller bridge. It lets one
+A private web guide for the Stadia macOS Controller bridge. It lets one
 operator see what every controller input does in the active application without
 having to remember shortcuts or inspect JSON.
 

@@ -956,7 +956,7 @@ function showError(error) {
 async function loadMappings() {
   setLoading();
   try {
-    const response = await fetch("/api/mappings", { cache: "no-store" });
+    const response = await fetch("/api/mappings.json", { cache: "no-store" });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
       throw new Error(payload.detail || payload.error || `Mapping request failed (${response.status})`);

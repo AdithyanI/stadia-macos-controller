@@ -17,7 +17,6 @@ cd "$ROOT_DIR"
   --check-shell \
   --no-input
 
-python3 scripts/check-controller-guide.py
 python3 scripts/check-controller-guide-static.py
 python3 scripts/check-mappings.py
 

@@ -13,12 +13,16 @@ Accessibility, and physical controller proof are in [deployment](deployment.md).
 ## Pages guide release
 
 Build command: `python3 scripts/build-controller-guide.py`; output: `dist`;
-repository root: `/`; production branch: `main`. The build uses Python's standard
+repository root: `/`; production branch: `main`; Pages project:
+`stadia-macos-controller-github`. The build uses Python's standard
 library and reads `CF_PAGES_COMMIT_SHA` (falling back to Git HEAD) for release
-identity. Do not build or install the Swift bridge in Pages.
+identity. Set `SKIP_DEPENDENCY_INSTALL=true` in the Pages build environment and
+omit `NODE_VERSION` / `PNPM_VERSION`: this standard-library Python build has no
+Node package manifest. A forced pnpm install fails before the build starts.
+Do not build or install the Swift bridge in Pages.
 
 Git-connected Pages builds must include `guide/*`, `config/mappings.json`, and
-`scripts/build-controller-guide.py` in their watch paths. Using all repository
+`scripts/*` in their watch paths. Using all repository
 paths is also safe. No GitHub Actions deployment is required. Development
 machines run `scripts/check-controller-guide-full.sh` before publication;
 Pages packages the accepted source.
@@ -30,19 +34,17 @@ credentials. All Pages hostnames require Access coverage before upload. See
 [Cloudflare redirects](https://developers.cloudflare.com/pages/configuration/redirects/)
 and [serving behavior](https://developers.cloudflare.com/pages/configuration/serving-pages/).
 
-Activation is pending verification in the shared migration tracker. Preserve the
-existing custom-hostname Access application during DNS cutover and protect the
-Pages hostnames separately. Verify exact JSON mapping parity, source SHA,
-headers, 404s and authenticated rendering before stopping the old service.
+Cloudflare Access protects the custom hostname and Pages hostnames separately.
+Hosted verification covers exact JSON mapping parity, source SHA, headers,
+unknown-route 404s and authenticated rendering.
 
-## Retained migration recovery client
+## Retired hosting cleanup
 
-`scripts/deploy-controller-guide.sh` is temporarily retained for status,
-rollback and uninstall of the old Mac mini guide. It defaults to dry-run and
-supports `--apply`, `--status`, `--logs`, `--rollback`, `--uninstall`, `--plain`
-and `--no-input`. The old server listens on `127.0.0.1:8798` and holds read-only
-releases under `~/.local/share/stadia-controller-guide/production/releases/`.
-Uninstall retains releases; remove their exact owned directory and logs after
-the one-week rollback window. Remove the retired service's deploy triggers,
-tunnel route and health probes at cutover so they cannot restart it. Never
-uninstall the separate controller input bridge.
+The old Mac mini Python server and guide deployment client are retired. Its
+LaunchAgent label was `com.dobby.stadia-controller-guide`; the input bridge is
+an independent service and remains installed. The shared migration tracker in
+`scripts/docs/projects/static-sites-to-cloudflare-pages/tasks.md` records live
+cutover evidence and the one-week rollback deadline. Retain exact owned release
+files at `~/.local/share/stadia-controller-guide/production/` and logs at
+`~/.local/state/stadia-controller-guide/` until that deadline, then remove them.
+Old source remains available through Git history for emergency recovery.

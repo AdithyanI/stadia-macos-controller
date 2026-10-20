@@ -6,7 +6,7 @@ continues to run on the Mac and hot-reload `config/mappings.json` independently.
 
 ## Hosting boundary
 
-The target host is Git-connected Cloudflare Pages at
+The host is Git-connected Cloudflare Pages (project `stadia-macos-controller-github`) at
 `https://controller.adithyan.io/`. `scripts/build-controller-guide.py` packages
 only the four guide assets, a byte-identical copy of `config/mappings.json`, a
 release identity, headers, route aliases, and a 404 page into `dist/`. Pages
@@ -23,25 +23,25 @@ branch, and deployment hostnames before any mappings are uploaded. Exact local
 automation mappings remain private-by-authentication. The build also carries the
 existing restrictive content security policy and no-store cache policy.
 
-## Migration and local development
+## Local development and retired hosting
 
-The Pages build is prepared; custom-domain activation and old-service retirement
-are tracked by `scripts/docs/projects/static-sites-to-cloudflare-pages/tasks.md`.
-Until cutover is verified, the existing loopback server and deployment client
-remain available for rollback. Their retained releases expire after the
-project's rollback window, not merely when the LaunchAgent is uninstalled.
+Build `dist/` then preview it with Python's standard static server; commands are
+in [setup](../references/setup.md). Rebuild after mapping edits. The page reads
+`/api/mappings.json` directly; Pages retains extensionless aliases for existing
+consumers. Unknown routes return 404 in both environments.
 
-`scripts/run-controller-guide.sh` serves a local development preview on
-`127.0.0.1:8173`, rereading checkout mappings on Refresh. It exposes only known
-guide routes, never the entire checkout. Unknown routes return 404 in both
-hosting models. `guide/app.js` uses the bridge's mapping precedence: enabled
-application-profile button mappings override `alwaysOn`; supported analog modes
-prefer `alwaysOn` when configured.
+The former Mac mini guide server, release client and dedicated LaunchAgent are
+retired. The shared migration tracker records operational cutover and removal
+of retained releases/logs after the one-week rollback window. The input bridge
+remains on the Mac and is unaffected by guide hosting.
+
+`guide/app.js` uses the bridge's mapping precedence: enabled application-profile
+button mappings override `alwaysOn`; supported analog modes prefer `alwaysOn`
+when configured.
 
 ## Verification
 
 The guide gate checks mapping semantics, static output isolation, exact mapping
-parity, route aliases, security headers, JavaScript syntax, and the retained
-local server/deployment contracts. Hosted verification must additionally prove
+parity, route aliases, security headers, JavaScript syntax and static HTTP routes. Hosted verification must additionally prove
 Access coverage, JSON content types, unknown-route 404 behavior and commit
 identity. Bridge behavior requires separate physical-controller verification.
