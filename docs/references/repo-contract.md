@@ -10,28 +10,39 @@ keystrokes; `scripts/check-mappings.py` enforces this boundary.
 `src/main.swift` owns execution and hot reload. Machine installation, signing,
 Accessibility, and physical controller proof are in [deployment](deployment.md).
 
-## Guide release
+## Pages guide release
 
-The guide is read-only. Its server allowlists assets and `/api/mappings` rather
-than exposing the checkout. `scripts/check-controller-guide-full.sh` validates
-the guide, source isolation, mapping parity, client output, and release contract.
-The repository full gate additionally builds the independent Swift bridge.
+Build command: `python3 scripts/build-controller-guide.py`; output: `dist`;
+repository root: `/`; production branch: `main`. The build uses Python's standard
+library and reads `CF_PAGES_COMMIT_SHA` (falling back to Git HEAD) for release
+identity. Do not build or install the Swift bridge in Pages.
 
-`scripts/deploy-controller-guide.sh` is the JSON-default production client.
-Default invocation is a dry run. Operators use `--apply`, `--status`, `--logs`,
-`--rollback`, or `--uninstall` through that client; rollback changes live state.
-Use `--plain` for readable output and `--no-input` for unattended operation.
+Git-connected Pages builds must include `guide/*`, `config/mappings.json`, and
+`scripts/build-controller-guide.py` in their watch paths. Using all repository
+paths is also safe. No GitHub Actions deployment is required. Development
+machines run `scripts/check-controller-guide-full.sh` before publication;
+Pages packages the accepted source.
 
-The client accepts clean committed `main`, gates a detached exact-SHA worktree,
-and rechecks source stability before activation. Read-only releases contain
-only guide assets, mappings, the standard-library server, and source identity,
-under `~/.local/share/stadia-controller-guide/production/releases/`.
-`current`/`previous` pointers support activation and recovery; failed launch or
-health restores the previous release. Health checks the served source SHA so a
-responsive stale process cannot pass.
+`/api/mappings` and `/api/health` are 200 aliases to `/api/mappings.json` and
+`/api/health.json`. A top-level `404.html` disables implicit SPA fallback.
+The output includes no bridge source, configuration other than mappings, or
+credentials. All Pages hostnames require Access coverage before upload. See
+[Cloudflare redirects](https://developers.cloudflare.com/pages/configuration/redirects/)
+and [serving behavior](https://developers.cloudflare.com/pages/configuration/serving-pages/).
 
-Production listens on `127.0.0.1:8798`; the shared tunnel and Cloudflare Access
-provide `https://controller.adithyan.io/`. The launchd environment is allowlisted.
-Use the client's normalized status and bounded redacted logs; raw `launchctl
-print` can expose inherited environment. Health timeout is 30 seconds by default
-(`--timeout 1..600`); `--progress off` leaves only final JSON on stdout.
+Activation is pending verification in the shared migration tracker. Preserve the
+existing custom-hostname Access application during DNS cutover and protect the
+Pages hostnames separately. Verify exact JSON mapping parity, source SHA,
+headers, 404s and authenticated rendering before stopping the old service.
+
+## Retained migration recovery client
+
+`scripts/deploy-controller-guide.sh` is temporarily retained for status,
+rollback and uninstall of the old Mac mini guide. It defaults to dry-run and
+supports `--apply`, `--status`, `--logs`, `--rollback`, `--uninstall`, `--plain`
+and `--no-input`. The old server listens on `127.0.0.1:8798` and holds read-only
+releases under `~/.local/share/stadia-controller-guide/production/releases/`.
+Uninstall retains releases; remove their exact owned directory and logs after
+the one-week rollback window. Remove the retired service's deploy triggers,
+tunnel route and health probes at cutover so they cannot restart it. Never
+uninstall the separate controller input bridge.

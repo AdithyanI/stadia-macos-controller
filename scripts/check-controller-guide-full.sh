@@ -20,6 +20,7 @@ cd "${ROOT_DIR}"
   --no-input
 
 python3 scripts/check-controller-guide.py
+python3 scripts/check-controller-guide-static.py
 python3 scripts/check-mappings.py
 
 echo "[check-controller-guide-full] checks passed"

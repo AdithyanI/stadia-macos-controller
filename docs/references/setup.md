@@ -25,6 +25,11 @@ The default guide is `http://localhost:8173/`; stop it with Control-C. It reread
 `/api/mappings`, and never edits mappings. Production guide operations are in
 [the release contract](repo-contract.md).
 
+For a Pages artifact build, run `python3 scripts/build-controller-guide.py`.
+The isolated output is `dist/`; validate it with
+`./scripts/check-controller-guide-full.sh`. Local preview keeps the live
+checkout behavior above; Pages serves the committed mapping snapshot.
+
 ## Mappings
 
 The running bridge watches `config/mappings.json`. Code changes need a restart;

@@ -1,68 +1,47 @@
 # Controller Guide
 
-The Controller Guide is a read-only local web surface for understanding the
-bridge configuration. It is deliberately separate from the bridge runtime: the
-guide never receives controller events and cannot execute or edit actions.
+The guide is a read-only web surface for the bridge configuration. It never
+receives controller events and cannot execute or edit actions. The Swift bridge
+continues to run on the Mac and hot-reload `config/mappings.json` independently.
 
-```mermaid
-flowchart LR
-    Browser[Local browser]
-    Server[Loopback guide server]
-    Release[Read-only versioned guide release]
-    RepoConfig[Repo config/mappings.json]
-    ReleaseConfig[Released config/mappings.json]
-    Deploy[Exact-source deploy]
-    Bridge[Controller bridge]
+## Hosting boundary
 
-    Browser -->|GET static assets| Server
-    Browser -->|GET /api/mappings| Server
-    Server --> Release
-    Release --> ReleaseConfig
-    RepoConfig --> Deploy --> Release
-    RepoConfig --> Bridge
-```
+The target host is Git-connected Cloudflare Pages at
+`https://controller.adithyan.io/`. `scripts/build-controller-guide.py` packages
+only the four guide assets, a byte-identical copy of `config/mappings.json`, a
+release identity, headers, route aliases, and a 404 page into `dist/`. Pages
+publishes this atomic snapshot without a Python server or a home-machine tunnel.
+The canonical mappings file remains the only source of action configuration.
 
-## Runtime shape
+`/api/mappings` and `/api/health` are compatibility aliases to static JSON files.
+The health response identifies the published commit; it is not bridge health.
+Refresh fetches the deployed snapshot. A mapping change reaches the published
+guide after its commit to main builds successfully.
 
-- `scripts/run-controller-guide.sh` starts a Python standard-library HTTP server
-  on `127.0.0.1:8173` and opens the default browser.
-- Production uses a dedicated LaunchAgent on `127.0.0.1:8798`. The shared
-  Mac mini Cloudflare Tunnel routes `controller.adithyan.io` to that loopback
-  service; Cloudflare Access authenticates the browser before traffic reaches
-  the guide.
-- `scripts/serve-controller-guide.py` serves an explicit allowlist of guide assets and exposes the
-  active release's config at `/api/mappings`.
-- Production packages only the guide assets, config, server, and source marker as a read-only
-  release under `~/.local/share/stadia-controller-guide/production/releases/`; launchd never serves
-  the mutable checkout.
-- The server does not expose the repository as a static directory.
-- `guide/app.js` resolves effective button mappings the same way as the bridge:
-  an enabled application-profile mapping wins over the same `alwaysOn` button.
-- For supported analog modes, `alwaysOn` configuration wins when present;
-  otherwise the enabled profile configuration is shown.
+Cloudflare Access must protect the custom hostname and all Pages production,
+branch, and deployment hostnames before any mappings are uploaded. Exact local
+automation mappings remain private-by-authentication. The build also carries the
+existing restrictive content security policy and no-store cache policy.
 
-## Boundaries
+## Migration and local development
 
-- `config/mappings.json` remains the only mapping source of truth.
-- Controller names, physical positions, and the Codex browser-focus operational
-  note are presentation metadata, not duplicated action configuration.
-- The guide is read-only. Mapping edits continue to happen in the JSON file.
-- The local development guide rereads the checkout config. Production rereads its immutable released
-  copy; a committed mapping change reaches it through the immediate latest-wins deploy.
-- The server binds to loopback by default and uses a restrictive content security
-  policy. It has no package dependencies, remote fonts, analytics, or telemetry.
-- The public hostname is private-by-authentication: it is reachable on the
-  internet only through the Adithyan-only Cloudflare Access application. Do not
-  remove that policy because the guide exposes exact local automation mappings.
+The Pages build is prepared; custom-domain activation and old-service retirement
+are tracked by `scripts/docs/projects/static-sites-to-cloudflare-pages/tasks.md`.
+Until cutover is verified, the existing loopback server and deployment client
+remain available for rollback. Their retained releases expire after the
+project's rollback window, not merely when the LaunchAgent is uninstalled.
 
-## Failure behavior
+`scripts/run-controller-guide.sh` serves a local development preview on
+`127.0.0.1:8173`, rereading checkout mappings on Refresh. It exposes only known
+guide routes, never the entire checkout. Unknown routes return 404 in both
+hosting models. `guide/app.js` uses the bridge's mapping precedence: enabled
+application-profile button mappings override `alwaysOn`; supported analog modes
+prefer `alwaysOn` when configured.
 
-- Invalid or unreadable JSON returns a structured `500` response and produces an
-  actionable error state in the page.
-- Unknown routes return `404`; they cannot be used to browse other repo files.
-- Refreshing the page or pressing Refresh rereads the active release's JSON. Mapping changes do not
-  need an application build, but production changes release atomically so guide assets and mappings
-  always come from one committed revision.
-- Deployment runs the complete guide release gate in an exact-SHA worktree and rechecks clean `main`
-  before activation. Launchd or health failure restores the prior versioned release. The separate
-  repo-wide full gate still compiles the Swift bridge.
+## Verification
+
+The guide gate checks mapping semantics, static output isolation, exact mapping
+parity, route aliases, security headers, JavaScript syntax, and the retained
+local server/deployment contracts. Hosted verification must additionally prove
+Access coverage, JSON content types, unknown-route 404 behavior and commit
+identity. Bridge behavior requires separate physical-controller verification.
